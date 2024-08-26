@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Management</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Book Management</h1>
+
+        <section class="form-section">
+            <h2>Add/Update Book</h2>
+            <form id="book-form">
+                <input type="text" id="isbn" placeholder="ISBN" required>
+                <input type="text" id="amazon_url" placeholder="Amazon URL">
+                <input type="text" id="author" placeholder="Author">
+                <input type="text" id="language" placeholder="Language">
+                <input type="number" id="pages" placeholder="Pages">
+                <input type="text" id="publisher" placeholder="Publisher">
+                <input type="text" id="title" placeholder="Title">
+                <input type="number" id="year" placeholder="Year">
+                <button type="submit">Save Book</button>
+            </form>
+        </section>
+
+        <section class="books-list">
+            <h2>Books List</h2>
+            <ul id="books-list"></ul>
+        </section>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const bookForm = document.getElementById('book-form');
+            const booksList = document.getElementById('books-list');
+
+            // Fetch all books on page load
+            async function fetchBooks() {
+                try {
+                    const res = await axios.get('/books');
+                    const books = res.data.books;
+                    booksList.innerHTML = books.map(book => `
+                        <li>
+                            <strong>${book.title}</strong> by ${book.author}
+                            <button onclick="deleteBook('${book.isbn}')">Delete</button>
+                        </li>
+                    `).join('');
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+
+            // Add or update a book
+            bookForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const bookData = {
+                    isbn: document.getElementById('isbn').value,
+                    amazon_url: document.getElementById('amazon_url').value,
+                    author: document.getElementById('author').value,
+                    language: document.getElementById('language').value,
+                    pages: document.getElementById('pages').value,
+                    publisher: document.getElementById('publisher').value,
+                    title: document.getElementById('title').value,
+                    year: document.getElementById('year').value
+                };
+
+                try {
+                    // Check if ISBN already exists
+                    const res = await axios.get(`/books/${bookData.isbn}`);
+                    await axios.put(`/books/${bookData.isbn}`, bookData);
+                    alert('Book updated successfully');
+                } catch (err) {
+                    if (err.response && err.response.status === 404) {
+                        // ISBN not found, create a new book
+                        await axios.post('/books', bookData);
+                        alert('Book added successfully');
+                    } else {
+                        console.error(err);
+                        alert('Failed to save book');
+                    }
+                }
+                fetchBooks();
+            });
+
+            // Delete a book
+            window.deleteBook = async function(isbn) {
+                try {
+                    await axios.delete(`/books/${isbn}`);
+                    alert('Book deleted successfully');
+                    fetchBooks();
+                } catch (err) {
+                    console.error(err);
+                    alert('Failed to delete book');
+                }
+            };
+
+            fetchBooks();
+        });
+    </script>
+</body>
+</html>
